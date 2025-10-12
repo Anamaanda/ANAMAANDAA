@@ -1,0 +1,60 @@
+WITH user_profiles AS (
+  SELECT
+    SPLIT(
+      `UserID;Name;Surname;Email;Gender;Race;Age;Province;Social Media Handle`, ';'
+    )[0] AS UserID,
+    SPLIT(`UserID;Name;Surname;Email;Gender;Race;Age;Province;Social Media Handle`, ';')[6] AS Age
+  FROM
+    `workspace`.`default`.`bright_tv_user_profiles`
+),
+viewership AS (
+  SELECT
+    SPLIT(`UserID;Channel2;new date time;Duration 2;userid;new date ; time`, ';')[0] AS UserID,
+    SPLIT(`UserID;Channel2;new date time;Duration 2;userid;new date ; time`, ';')[3] AS Duration
+  FROM
+    `workspace`.`default`.`bright_tv_viewership3`
+),
+joined AS (
+  SELECT
+    up.UserID,
+    CAST(up.Age AS INT) AS Age,
+    v.Duration
+  FROM
+    user_profiles up
+      JOIN viewership v
+        ON up.UserID = v.UserID
+  WHERE
+    up.Age IS NOT NULL
+    AND v.Duration IS NOT NULL
+),
+with_buckets AS (
+  SELECT
+    UserID,
+    Age,
+    CASE
+      WHEN Age < 20 THEN '<20'
+      WHEN Age BETWEEN 20 AND 29 THEN '20-29'
+      WHEN Age BETWEEN 30 AND 39 THEN '30-39'
+      WHEN Age BETWEEN 40 AND 49 THEN '40-49'
+      ELSE '50+'
+    END AS Age_Bucket,
+    Duration
+  FROM
+    joined
+)
+SELECT
+  Age_Bucket,
+  COUNT(DISTINCT UserID) AS User_Count,
+  COUNT(*) AS View_Count,
+  SUM(
+    CAST(SPLIT(Duration, ':')[0] AS INT) * 3600 + CAST(SPLIT(Duration, ':')[1] AS INT) * 60
+    + CAST(SPLIT(Duration, ':')[2] AS INT)
+  ) AS Total_Seconds_Watched
+FROM
+  with_buckets
+WHERE
+  Age IS NOT NULL
+GROUP BY
+  Age_Bucket
+ORDER BY
+  Age_Bucket;
