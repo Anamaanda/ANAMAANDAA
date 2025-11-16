@@ -1,0 +1,25 @@
+
+-- SQL Script for Bright Motors Car Sales
+
+ALTER TABLE car_sales_cleaned
+ADD COLUMN total_revenue NUMBER;
+
+UPDATE car_sales_cleaned
+SET total_revenue = selling_price * units_sold;
+
+ALTER TABLE car_sales_cleaned
+ADD COLUMN profit_margin NUMBER;
+
+UPDATE car_sales_cleaned
+SET profit_margin = ((selling_price - cost_price) / selling_price) * 100;
+
+ALTER TABLE car_sales_cleaned
+ADD COLUMN performance_tier VARCHAR;
+
+UPDATE car_sales_cleaned
+SET performance_tier = 
+    CASE 
+        WHEN profit_margin > 25 THEN 'High Margin'
+        WHEN profit_margin BETWEEN 10 AND 25 THEN 'Medium Margin'
+        ELSE 'Low Margin'
+    END;
